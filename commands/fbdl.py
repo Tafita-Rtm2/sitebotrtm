@@ -1,37 +1,35 @@
 import requests
 
 def chatbot(bot, data):
-    # Vérifie si l'utilisateur a posé une question
+    # Vérifie si une question est fournie
     if not data.args:
         return bot.sendMessage(":danger-color[:icon[fa-solid fa-warning]] Please provide a question for the chatbot.")
-
+    
     user_question = " ".join(data.args)  # Combine les arguments en une seule question
     api_url = "https://kaiz-apis.gleeze.com/api/gpt-4o"
     params = {
         "q": user_question,  # La question de l'utilisateur
-        "uid": 1  # Identifiant utilisateur, si nécessaire
+        "uid": 1  # Identifiant utilisateur
     }
 
-    # Indique que le bot réfléchit
+    # Envoi d'un message temporaire pour indiquer que le bot réfléchit
     loading = bot.sendMessage(":icon[fa-solid fa-circle-notch fa-spin] Thinking, please wait...")
 
     try:
         # Requête à l'API
         response = requests.get(api_url, params=params)
         response.raise_for_status()  # Vérifie les erreurs HTTP
-        data = response.json()
+        api_data = response.json()
 
-        # Vérifie si la réponse contient un champ valide
-        if "response" not in data:
+        # Vérifie si la réponse de l'API contient le champ attendu
+        if "response" not in api_data:
             bot.unsendMessage(loading['id'])
             return bot.sendMessage(":danger-color[:icon[fa-solid fa-warning]] The API did not return a valid response.")
 
-        # Crée le message de réponse
-        message = {
-            "body": f":bold[:icon[fa-solid fa-robot] Chatbot Response]:\n{data['response']}"
-        }
+        # Construction de la réponse à partir des données de l'API
+        message = f":bold[:icon[fa-solid fa-robot] Chatbot Response]:\n{api_data['response']}"
         bot.unsendMessage(loading['id'])
-        bot.sendMessage(message)
+        bot.sendMessage(message, data.messageId)
 
     except Exception as e:
         # Gère les erreurs API ou autres
