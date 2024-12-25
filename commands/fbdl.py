@@ -1,39 +1,48 @@
 import requests
 
 def chatbot(bot, data):
-    if not data.args:  # Vérifie si une question a été posée
-        return bot.sendMessage(":danger-color[:icon[fa-solid fa-warning]] Vous devez poser une question après la commande.")
+    # Vérifie si l'utilisateur a posé une question
+    if not data.args:
+        return bot.sendMessage(":danger-color[:icon[fa-solid fa-warning]] Please provide a question for the chatbot.")
 
-    user_question = " ".join(data.args)  # La question posée par l'utilisateur
+    user_question = " ".join(data.args)  # Combine les arguments en une seule question
     api_url = "https://kaiz-apis.gleeze.com/api/gpt-4o"
     params = {
-        "q": user_question,  # La question utilisateur envoyée à l'API
-        "uid": 1  # Identifiant utilisateur si nécessaire
+        "q": user_question,  # La question de l'utilisateur
+        "uid": 1  # Identifiant utilisateur, si nécessaire
     }
 
-    # Envoi de la requête à l'API
+    # Indique que le bot réfléchit
+    loading = bot.sendMessage(":icon[fa-solid fa-circle-notch fa-spin] Thinking, please wait...")
+
     try:
-        loading = bot.sendMessage(":icon[fa-solid fa-circle-notch fa-spin] Je réfléchis, veuillez patienter...")
+        # Requête à l'API
         response = requests.get(api_url, params=params)
         response.raise_for_status()  # Vérifie les erreurs HTTP
         data = response.json()
-        bot.unsendMessage(loading['id'])
 
+        # Vérifie si la réponse contient un champ valide
         if "response" not in data:
-            return bot.sendMessage(":danger-color[:icon[fa-solid fa-warning]] Une erreur s'est produite. Aucune réponse trouvée.")
+            bot.unsendMessage(loading['id'])
+            return bot.sendMessage(":danger-color[:icon[fa-solid fa-warning]] The API did not return a valid response.")
 
-        # Construction de la réponse
-        message = ":bold[:icon[fa-solid fa-robot] Réponse du Chatbot]\n"
-        message += data["response"]  # La réponse de l'API
-        bot.sendMessage(message, data.messageId)
+        # Crée le message de réponse
+        message = {
+            "body": f":bold[:icon[fa-solid fa-robot] Chatbot Response]:\n{data['response']}"
+        }
+        bot.unsendMessage(loading['id'])
+        bot.sendMessage(message)
 
     except Exception as e:
+        # Gère les erreurs API ou autres
         bot.unsendMessage(loading['id'])
-        return bot.sendMessage(f":danger-color[:icon[fa-solid fa-warning]] Une erreur est survenue : {str(e)}", data.messageId)
+        return bot.sendMessage(f":danger-color[:icon[fa-solid fa-warning]] An error occurred: {str(e)}")
 
+# Configuration de la commande
 config = {
     "name": 'chatbot',
-    "credits": "Greegmon",
-    "description": "Répond à vos questions grâce à une API de chatbot",
-    "def": chatbot
+    "def": chatbot,
+    "usage": "{p}chatbot <question>",
+    "description": "Answers user questions via an AI-powered chatbot API",
+    "credits": 'Greegmon'
 }
